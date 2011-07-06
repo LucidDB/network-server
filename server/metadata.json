@@ -1,13 +1,20 @@
 {"packages": [
-  { "_comment": "The id tag is completely optional, it should just correspond to the
-array index since that's what the depend and reverse depend arrays need to reference.",
+  { "_comment": "The 'id' tag is completely optional, it should just correspond
+to the array index since that's what the depend and reverse depend arrays need
+to reference.
+
+Also optional, the 'url' tag. If specified, we will download whatever is at
+the specified url endpoint. If unspecified, we will download the file named
+from the composition of 'publisher-package-version.jar' and downloaded via
+the same directory and server hosting this metadata.
+",
 
     "id": 0, "md5sum": "f9f74e4f853f3888e4e21d17afb4a0b8",
     "type": "connector", "publisher": "Dynamo", "package": "CouchDB",
-    "version": "1.1", "jar": "conn-couchdb.jar", "depend": [],
+    "version": "1.1", "depend": [],
     "rdepend": [1] }
 , { "id": 1, "md5sum": "750925e84b813fb49b2d0df2e5cd9308",
     "type": "engine", "publisher": "Jython", "package": "Jython",
-    "version": "2.5.1", "jar": "jython.jar", "depend": [0],
+    "version": "2.5.1", "depend": [0],
     "rdepend": [] }
 ]}

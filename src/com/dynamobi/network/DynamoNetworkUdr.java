@@ -38,13 +38,9 @@ import net.sf.farrago.util.*; // Needed for $FARRAGO_HOME
 public class DynamoNetworkUdr {
 
   /**
-   * Procedure to avoid an explicit insert yourself, also takes off the ending slash
-   * of a url/file-url if supplied.
+   * Procedure to avoid an explicit insert yourself.
    */
   public static void addRepo(String repoUrl) throws SQLException {
-    if (repoUrl.endsWith("/")) {
-      repoUrl = repoUrl.substring(-1);
-    }
     Connection conn = DriverManager.getConnection("jdbc:default:connection");
     String query = "INSERT INTO localdb.sys_network.repositories (repo_url) "
       + "VALUES (?)";
@@ -93,14 +89,15 @@ public class DynamoNetworkUdr {
       JSONObject repo_data = downloadMetadata(repo);
       JSONArray pkgs = (JSONArray) repo_data.get("packages");
       for (JSONObject obj : (List<JSONObject>)pkgs) {
-        String status = getStatus(obj.get("jar").toString());
+        String jar = jarName(obj);
+        String status = getStatus(jar);
         int c = 0;
         resultInserter.setString(++c, repo);
         resultInserter.setString(++c, obj.get("type").toString());
         resultInserter.setString(++c, obj.get("publisher").toString());
         resultInserter.setString(++c, obj.get("package").toString());
         resultInserter.setString(++c, obj.get("version").toString());
-        resultInserter.setString(++c, obj.get("jar").toString());
+        resultInserter.setString(++c, jar);
         resultInserter.setString(++c, status);
         resultInserter.executeUpdate();
       }
@@ -135,9 +132,17 @@ public class DynamoNetworkUdr {
       JSONArray pkgs = (JSONArray) repo_data.get("packages");
       for (JSONObject obj : (List<JSONObject>)pkgs) {
         if (pkgName.equals(obj.get("package").toString())) {
-          fetchJar(repo, obj.get("jar").toString(), obj.get("md5sum").toString());
+          String jar = jarName(obj);
+          String url = repo;
+          if (!url.endsWith("/"))
+            url += "/";
+          if (obj.containsKey("url"))
+            url = obj.get("url").toString();
+          else
+            url += jar;
+          fetchJar(url, jar, obj.get("md5sum").toString());
           if (install)
-            installJar(obj.get("jar").toString());
+            installJar(jarName(obj));
           // automatically install dependencies, and the deps of deps,
           // recursively.
           // Enhancement: optional function call param for this.
@@ -195,9 +200,9 @@ public class DynamoNetworkUdr {
       for (JSONObject obj : (List<JSONObject>)pkgs) {
         if (pkgName.equals(obj.get("package").toString())) {
           if (fromDisk)
-            removeJar(obj.get("jar").toString());
+            removeJar(jarName(obj));
           if (fromDB)
-            uninstallJar(obj.get("jar").toString());
+            uninstallJar(jarName(obj));
           // automatically remove reverse-dependencies too, recursively.
           // Enhancement: optional function call param for this.
           for (Long id : (List<Long>)obj.get("rdepend")) {
@@ -208,6 +213,14 @@ public class DynamoNetworkUdr {
         }
       }
     }
+  }
+
+  /**
+   * Composes a jar file .jar name from attributes in obj:
+   * publisher-package-version.jar
+   */
+  private static String jarName(JSONObject obj) {
+    return obj.get("publisher") + "-" + obj.get("package") + "-" + obj.get("version") + ".jar";
   }
 
   /**
@@ -230,7 +243,7 @@ public class DynamoNetworkUdr {
   /**
    * Fetches and stores a .jar file from a repo url/file-url, doing an md5sum check too.
    */
-  private static void fetchJar(String repo, String jarFile, String md5sum)
+  private static void fetchJar(String url, String jarFile, String md5sum)
     throws SQLException
   {
     BufferedInputStream in = null;
@@ -238,7 +251,7 @@ public class DynamoNetworkUdr {
     try {
       String outfile = FarragoProperties.instance().expandProperties(
           "${FARRAGO_HOME}/plugin/" + jarFile);
-      in = new BufferedInputStream(new URL(repo + "/" + jarFile).openStream());
+      in = new BufferedInputStream(new URL(url).openStream());
       out = new FileOutputStream(outfile);
       final int block_size = 1 << 18; // 256 kb
       byte data[] = new byte[block_size];
