@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="jar">
+
+  <property name="src.dir" value="${basedir}/src" />
+  <property name="lib.dir" value="${basedir}/libs" />
+  <property name="build.dir" value="${basedir}/deploy" />
+  <property name="jar.name" value="dynamobi_network.jar" />
+
+  <path id="classpath">
+    <fileset file="${lib.dir}/*.jar" />
+  </path>
+
+  <target name="clean">
+    <delete dir="${build.dir}" />
+  </target>
+
+  <target name="build">
+    <mkdir dir="${build.dir}/classes" />
+    <!-- hack to package all classes up together -->
+    <unjar dest="${build.dir}/classes">
+      <fileset excludes="farrago.jar" file="${lib.dir}/*.jar" />
+    </unjar>
+    <javac srcdir="${src.dir}" destdir="${build.dir}/classes"
+      includeantruntime="false"
+      classpathref="classpath" 
+      debug="true"/>
+  </target>
+
+  <target name="jar" depends="build">
+    <copy file="initsql/deploy.txt" todir="${build.dir}/classes" />
+    <jar destfile="${build.dir}/${jar.name}">
+      <manifest>
+        <!-- necessary for LucidDB -->
+        <section name="deploy.txt">
+          <attribute name="SQLJDeploymentDescriptor" value="TRUE" />
+        </section>
+      </manifest>
+      <fileset dir="${build.dir}/classes">
+        <include name="**/*" />
+      </fileset>
+    </jar>
+  </target>
+
+</project>

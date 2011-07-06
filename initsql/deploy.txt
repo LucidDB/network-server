@@ -1,0 +1,94 @@
+SQLActions[ ] = {
+  "BEGIN INSTALL
+  create schema localdb.sys_network;
+  set schema 'localdb.sys_network';
+
+  create table repositories(
+    id int generated always as identity not null primary key,
+    repo_url varchar(255) not null);
+  
+  create procedure add_repository(
+    repo_url varchar(255))
+  language java
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.addRepo';
+
+  create procedure remove_repository(
+    repo_url varchar(255))
+  language java
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.removeRepo';
+
+  create function show_packages()
+  returns table(repository_url varchar(255),
+    type varchar(255),
+    publisher varchar(255),
+    package varchar(255),
+    version varchar(128),
+    jar varchar(255),
+    status varchar(128))
+  language java
+  parameter style system defined java
+  reads sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.showPackages';
+
+  create view packages as select * from
+    table(sys_network.show_packages());
+
+  -- just downloads jars and dep jars, doesn't do anything else with them
+  create procedure net_download(
+    package varchar(255))
+  language java
+  parameter style system defined java
+  reads sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.download';
+
+  -- wipes package from file system and luciddb
+  create procedure net_remove(
+    package varchar(255))
+  language java
+  parameter style system defined java
+  reads sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.remove';
+
+  -- does a full download and installation with deps.
+  create procedure net_install(
+    package varchar(255))
+  language java
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.install';
+
+  -- just does the installation on a specified .jar name in plugin dir, no
+  -- deps, no fetching
+  create procedure net_install_jar(
+    jarfile varchar(255))
+  language java
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.installJar';
+
+  -- uninstalls jars but don't actually delete the files, also handles reverse deps
+  create procedure net_uninstall(
+    package varchar(255))
+  language java
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.uninstall';
+
+  -- removes a passed '.jar' file from luciddb, doesn't actually delete it, no deps
+  create procedure net_uninstall_jar(
+    jarfile varchar(255))
+  language java
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.uninstallJar';
+
+
+END INSTALL",
+    "BEGIN REMOVE
+  drop schema sys_network cascade;
+END REMOVE"
+}
