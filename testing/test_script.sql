@@ -1,21 +1,21 @@
 -- after installing the network jar, you can edit the repository path
--- (/home/kevin/git_repos/dynamo_network/server)
+-- (/home/kevin/git_repos/dynamobi-network/server)
 -- in the three places it occurs below and try
 -- running this script!
 !set outputformat vertical
 !set color true
-call sys_network.add_repository('file:///home/kevin/git_repos/dynamo_network/server');
+call sys_network.add_repository('file:///home/kevin/git_repos/dynamobi-network/server');
 
 
 -- verify we have nothing downloaded, repo can be accessed
 select * from sys_network.repositories;
 select * from sys_network.packages;
 -- fun with removing
-call sys_network.remove_repository('file:///home/kevin/git_repos/dynamo_network/server');
+call sys_network.remove_repository('file:///home/kevin/git_repos/dynamobi-network/server');
 select * from sys_network.repositories;
 select * from sys_network.packages;
 -- add it back
-call sys_network.add_repository('file:///home/kevin/git_repos/dynamo_network/server');
+call sys_network.add_repository('file:///home/kevin/git_repos/dynamobi-network/server');
 
 -- in our sample metadata, jython has a pretend dependency on couchdb, so installing
 -- pkg Jython should grab couchdb too

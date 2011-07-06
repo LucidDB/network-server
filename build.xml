@@ -4,7 +4,7 @@
   <property name="src.dir" value="${basedir}/src" />
   <property name="lib.dir" value="${basedir}/libs" />
   <property name="build.dir" value="${basedir}/deploy" />
-  <property name="jar.name" value="dynamobi_network.jar" />
+  <property name="jar.name" value="dynamobi-network.jar" />
 
   <path id="classpath">
     <fileset file="${lib.dir}/*.jar" />
