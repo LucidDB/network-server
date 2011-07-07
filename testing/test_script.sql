@@ -12,6 +12,8 @@ select * from sys_network.repositories;
 select * from sys_network.packages;
 -- fun with removing
 call sys_network.remove_repository('file:///home/kevin/git_repos/dynamobi-network/server');
+-- also add a nonexistent url (probably anyway)
+call sys_network.add_repository('http://y05M5Vxfg1juZVNhVkoNl6WWhmXCFXBNeBY6DK2NgAL1TNioU03EJREru40gjTJ3');
 select * from sys_network.repositories;
 select * from sys_network.packages;
 -- add it back

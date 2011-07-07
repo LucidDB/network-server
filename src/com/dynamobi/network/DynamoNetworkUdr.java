@@ -84,8 +84,16 @@ public class DynamoNetworkUdr {
   public static void showPackages(PreparedStatement resultInserter)
     throws SQLException
   {
-    List<String> repos = getRepoUrls();
-    for (String repo : repos) {
+    List<RepoInfo> repos = getRepoUrls();
+    for (RepoInfo inf : repos) {
+      String repo = inf.url;
+      if (!inf.accessible) {
+        resultInserter.setString(1, repo);
+        resultInserter.setBoolean(2, inf.accessible);
+        resultInserter.executeUpdate();
+        continue;
+      }
+
       JSONObject repo_data = downloadMetadata(repo);
       JSONArray pkgs = (JSONArray) repo_data.get("packages");
       for (JSONObject obj : (List<JSONObject>)pkgs) {
@@ -93,6 +101,7 @@ public class DynamoNetworkUdr {
         String status = getStatus(jar);
         int c = 0;
         resultInserter.setString(++c, repo);
+        resultInserter.setBoolean(++c, inf.accessible);
         resultInserter.setString(++c, obj.get("type").toString());
         resultInserter.setString(++c, obj.get("publisher").toString());
         resultInserter.setString(++c, obj.get("package").toString());
@@ -124,8 +133,10 @@ public class DynamoNetworkUdr {
   public static void download(String pkgName, boolean install)
     throws SQLException
   {
-    List<String> repos = getRepoUrls();
-    for (String repo : repos) {
+    List<RepoInfo> repos = getRepoUrls();
+    for (RepoInfo inf : repos) {
+      if (!inf.accessible) continue;
+      String repo = inf.url;
       // by default, we pick the package from the first repo we find it in.
       // Enhancement: supply repo url in function call.
       JSONObject repo_data = downloadMetadata(repo);
@@ -193,8 +204,10 @@ public class DynamoNetworkUdr {
   public static void remove(String pkgName, boolean fromDisk, boolean fromDB)
     throws SQLException
   {
-    List<String> repos = getRepoUrls();
-    for (String repo : repos) {
+    List<RepoInfo> repos = getRepoUrls();
+    for (RepoInfo inf : repos) {
+      if (!inf.accessible) continue;
+      String repo = inf.url;
       JSONObject repo_data = downloadMetadata(repo);
       JSONArray pkgs = (JSONArray) repo_data.get("packages");
       for (JSONObject obj : (List<JSONObject>)pkgs) {
@@ -327,7 +340,7 @@ public class DynamoNetworkUdr {
    * Fetches the master metadata.json file on a given repository and returns the
    * data as a JSONObject.
    */
-  public static JSONObject downloadMetadata(String repo) throws SQLException {
+  private static JSONObject downloadMetadata(String repo) throws SQLException {
     if (repo == null)
       return null;
 
@@ -335,6 +348,8 @@ public class DynamoNetworkUdr {
       // Grab master metadata.json
       URL u = new URL(repo + "/metadata.json");
       URLConnection uc = u.openConnection();
+      uc.setConnectTimeout(1000); // generous max-of-1-second to connect
+      uc.setReadTimeout(1000);
       uc.connect();
       InputStreamReader in = new InputStreamReader(uc.getInputStream());
       BufferedReader buff = new BufferedReader(in);
@@ -351,21 +366,35 @@ public class DynamoNetworkUdr {
       JSONObject ob = (JSONObject) parser.parse(data);
       return ob;
 
+    } catch (SocketTimeoutException e) {
+      throw new SQLException(URL_TIMEOUT);
     } catch (MalformedURLException e) {
       throw new SQLException("Bad URL.");
     } catch (IOException e) {
-      throw new SQLException("Could not read data from URL.");
+      throw new SQLException(URL_TIMEOUT);
     } catch (ParseException e) {
       throw new SQLException("Could not parse data from URL.");
     }
 
   }
 
+  private static String URL_TIMEOUT = "URL Timeout";
+
+  private static class RepoInfo {
+    public String url;
+    public boolean accessible;
+    public RepoInfo(String url, boolean accessible) {
+      this.url = url;
+      this.accessible = accessible;
+    }
+  }
+
   /**
-   * Grabbing the list of repos for internal use.
+   * Grabbing the list of repos along with their availability
+   * status for internal use. 
    */
-  public static List<String> getRepoUrls() throws SQLException {
-    List<String> urls = new ArrayList<String>();
+  private static List<RepoInfo> getRepoUrls() throws SQLException {
+    List<RepoInfo> repos = new ArrayList<RepoInfo>();
 
     Connection conn = DriverManager.getConnection("jdbc:default:connection");
     String query = "SELECT repo_url FROM localdb.sys_network.repositories " +
@@ -374,12 +403,20 @@ public class DynamoNetworkUdr {
     ps.execute();
     ResultSet rs = ps.getResultSet();
     while (rs.next()) {
-      urls.add(rs.getString(1));
+      String repo = rs.getString(1);
+      boolean accessible = true;
+      try {
+        JSONObject ob = downloadMetadata(repo);
+      } catch (SQLException e) {
+        if (e.getMessage().equals(URL_TIMEOUT))
+          accessible = false;
+      }
+      repos.add(new RepoInfo(repo, accessible));
     }
-
     rs.close();
     ps.close();
-    return urls;
+
+    return repos;
   }
 
 }

@@ -23,6 +23,7 @@ SQLActions[ ] = {
 
   create function show_packages()
   returns table(repository_url varchar(255),
+    repository_accessible boolean,
     type varchar(255),
     publisher varchar(255),
     package varchar(255),
