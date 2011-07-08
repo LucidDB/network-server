@@ -202,15 +202,20 @@ public class DynamoNetworkUdr {
           // recursively.
           // Enhancement: optional function call param for this.
           for (String fullName : (List<String>)obj.get("depend")) {
-            // we have to find which package it is...
-            for (JSONObject depobj : (List<JSONObject>)pkgs) {
-              if (jarNameMatches(depobj, fullName))
-              {
-                download(depobj.get("publisher").toString(),
-                    depobj.get("package").toString(),
-                    depobj.get("version").toString(),
-                    install);
-                break;
+            // we have to find which package it is without relying on
+            // splitting the string... and it could be in any repo!
+            // Yes this is very slow.
+            for (RepoInfo depinf : repos) {
+              if (!depinf.accessible) continue;
+              for (JSONObject depobj : (List<JSONObject>)downloadMetadata(inf.url).get("packages")) {
+                if (jarNameMatches(depobj, fullName))
+                {
+                  download(depobj.get("publisher").toString(),
+                      depobj.get("package").toString(),
+                      depobj.get("version").toString(),
+                      install);
+                  break;
+                }
               }
             }
           }
@@ -280,15 +285,17 @@ public class DynamoNetworkUdr {
           // automatically remove reverse-dependencies too, recursively.
           // Enhancement: optional function call param for this.
           for (String fullName : (List<String>)obj.get("rdepend")) {
-            // we have to find which package it is...
-            for (JSONObject depobj : (List<JSONObject>)pkgs) {
-              if (jarNameMatches(depobj, fullName))
-              {
-                remove(depobj.get("publisher").toString(),
-                    depobj.get("package").toString(),
-                    depobj.get("version").toString(),
-                    fromDisk, fromDB);
-                break;
+            for (RepoInfo depinf : repos) {
+              if (!depinf.accessible) continue;
+              for (JSONObject depobj : (List<JSONObject>)downloadMetadata(inf.url).get("packages")) {
+                if (jarNameMatches(depobj, fullName))
+                {
+                  remove(depobj.get("publisher").toString(),
+                      depobj.get("package").toString(),
+                      depobj.get("version").toString(),
+                      fromDisk, fromDB);
+                  break;
+                }
               }
             }
           }

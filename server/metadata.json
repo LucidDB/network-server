@@ -3,7 +3,8 @@
 Dependencies and reverse dependencies are names composed of
 the string 'publisher-package-version'. When a package is net_install'ed
 its dependencies are automatically installed. When a package is net_remove'd
-its reverse dependencies are automatically removed.
+its reverse dependencies are automatically removed. The dep. does not have to
+be in this metadata.
 
 Optional, the 'url' tag. If specified, we will download whatever is at
 the specified url endpoint. If unspecified, we will download the file named
