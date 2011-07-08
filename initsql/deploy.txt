@@ -87,6 +87,46 @@ SQLActions[ ] = {
   modifies sql data
   external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.uninstallJar';
 
+  -- long forms of download/remove/install/uninstall for full granularity
+  create procedure net_download(
+    publisher varchar(255),
+    package varchar(255),
+    version varchar(255))
+  language java
+  specific net_download2
+  parameter style system defined java
+  reads sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.download';
+
+  create procedure net_remove(
+    publisher varchar(255),
+    package varchar(255),
+    version varchar(255))
+  language java
+  specific net_remove2
+  parameter style system defined java
+  reads sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.remove';
+
+  create procedure net_install(
+    publisher varchar(255),
+    package varchar(255),
+    version varchar(255))
+  language java
+  specific net_install2
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.install';
+
+  create procedure net_uninstall(
+    publisher varchar(255),
+    package varchar(255),
+    version varchar(255))
+  language java
+  specific net_uninstall2
+  parameter style system defined java
+  modifies sql data
+  external name 'thisjar:com.dynamobi.network.DynamoNetworkUdr.uninstall';
 
 END INSTALL",
     "BEGIN REMOVE

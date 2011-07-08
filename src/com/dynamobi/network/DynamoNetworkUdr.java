@@ -72,10 +72,28 @@ public class DynamoNetworkUdr {
   }
 
   /**
+   * Full form.
+   */
+  public static void download(String publisher, String pkgName, String version)
+    throws SQLException
+  {
+    download(publisher, pkgName, version, false);
+  }
+
+  /**
    * Fetches and installs a package, with dependencies.
    */
   public static void install(String pkgName) throws SQLException {
     download(pkgName, true);
+  }
+
+  /**
+   * Full form.
+   */
+  public static void install(String publisher, String pkgName, String version)
+    throws SQLException
+  {
+    download(publisher, pkgName, version, true);
   }
 
   /**
@@ -121,10 +139,28 @@ public class DynamoNetworkUdr {
   }
 
   /**
+   * Full form.
+   */
+  public static void remove(String publisher, String pkgName, String version)
+    throws SQLException
+  {
+    remove(publisher, pkgName, version, true, true);
+  }
+
+  /**
    * Uninstalls jars from luciddb, leaves files around, takes care of reverse deps.
    */
   public static void uninstall(String pkgName) throws SQLException {
     remove(pkgName, false, true);
+  }
+
+  /**
+   * Full version.
+   */
+  public static void uninstall(String publisher, String pkgName, String version)
+    throws SQLException
+  {
+    remove(publisher, pkgName, version, false, true);
   }
 
   /**
@@ -133,6 +169,14 @@ public class DynamoNetworkUdr {
   public static void download(String pkgName, boolean install)
     throws SQLException
   {
+    download(null, pkgName, null, install);
+  }
+
+  /**
+   * Full form.
+   */
+  public static void download(String publisher, String pkgName, String version,
+      boolean install) throws SQLException {
     List<RepoInfo> repos = getRepoUrls();
     for (RepoInfo inf : repos) {
       if (!inf.accessible) continue;
@@ -142,7 +186,7 @@ public class DynamoNetworkUdr {
       JSONObject repo_data = downloadMetadata(repo);
       JSONArray pkgs = (JSONArray) repo_data.get("packages");
       for (JSONObject obj : (List<JSONObject>)pkgs) {
-        if (pkgName.equals(obj.get("package").toString())) {
+        if (isPkg(publisher, pkgName, version, obj)) {
           String jar = jarName(obj);
           String url = repo;
           if (!url.endsWith("/"))
@@ -157,9 +201,18 @@ public class DynamoNetworkUdr {
           // automatically install dependencies, and the deps of deps,
           // recursively.
           // Enhancement: optional function call param for this.
-          for (Long id : (List<Long>)obj.get("depend")) {
-            JSONObject pk = (JSONObject) pkgs.get(id.intValue());
-            download(pk.get("package").toString(), install);
+          for (String fullName : (List<String>)obj.get("depend")) {
+            // we have to find which package it is...
+            for (JSONObject depobj : (List<JSONObject>)pkgs) {
+              if (jarNameMatches(depobj, fullName))
+              {
+                download(depobj.get("publisher").toString(),
+                    depobj.get("package").toString(),
+                    depobj.get("version").toString(),
+                    install);
+                break;
+              }
+            }
           }
           return;
         }
@@ -204,6 +257,14 @@ public class DynamoNetworkUdr {
   public static void remove(String pkgName, boolean fromDisk, boolean fromDB)
     throws SQLException
   {
+    remove(null, pkgName, null, fromDisk, fromDB);
+  }
+
+  /**
+   * Full form.
+   */
+  public static void remove(String publisher, String pkgName, String version,
+      boolean fromDisk, boolean fromDB) throws SQLException {
     List<RepoInfo> repos = getRepoUrls();
     for (RepoInfo inf : repos) {
       if (!inf.accessible) continue;
@@ -211,21 +272,53 @@ public class DynamoNetworkUdr {
       JSONObject repo_data = downloadMetadata(repo);
       JSONArray pkgs = (JSONArray) repo_data.get("packages");
       for (JSONObject obj : (List<JSONObject>)pkgs) {
-        if (pkgName.equals(obj.get("package").toString())) {
+        if (isPkg(publisher, pkgName, version, obj)) {
           if (fromDisk)
             removeJar(jarName(obj));
           if (fromDB)
             uninstallJar(jarName(obj));
           // automatically remove reverse-dependencies too, recursively.
           // Enhancement: optional function call param for this.
-          for (Long id : (List<Long>)obj.get("rdepend")) {
-            JSONObject pk = (JSONObject) pkgs.get(id.intValue());
-            remove(pk.get("package").toString(), fromDisk, fromDB);
+          for (String fullName : (List<String>)obj.get("rdepend")) {
+            // we have to find which package it is...
+            for (JSONObject depobj : (List<JSONObject>)pkgs) {
+              if (jarNameMatches(depobj, fullName))
+              {
+                remove(depobj.get("publisher").toString(),
+                    depobj.get("package").toString(),
+                    depobj.get("version").toString(),
+                    fromDisk, fromDB);
+                break;
+              }
+            }
           }
           return;
         }
       }
     }
+  }
+
+
+  /**
+   * Helper function to determine if an obj is the package we're looking for.
+   */
+  private static boolean isPkg(String publisher, String pkgName, String version, JSONObject obj) {
+    boolean ispkg = true;
+    if (publisher != null && pkgName != null && version != null) {
+      ispkg = (publisher.equals(obj.get("publisher").toString()) &&
+          version.equals(obj.get("version").toString()));
+    }
+    ispkg &= pkgName.equals(obj.get("package").toString());
+    return ispkg;
+  }
+
+  /**
+   * Helper function to see if an obj jarName is a full package dep name.
+   */
+  private static boolean jarNameMatches(JSONObject obj, String testName) {
+    if (!testName.endsWith(".jar"))
+      testName += ".jar";
+    return testName.equals(jarName(obj));
   }
 
   /**
