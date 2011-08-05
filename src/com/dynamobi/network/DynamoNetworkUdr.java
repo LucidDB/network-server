@@ -126,6 +126,8 @@ public class DynamoNetworkUdr {
         resultInserter.setString(++c, obj.get("version").toString());
         resultInserter.setString(++c, jar);
         resultInserter.setString(++c, status);
+        resultInserter.setString(++c, obj.get("depend").toString());
+        resultInserter.setString(++c, obj.get("rdepend").toString());
         resultInserter.executeUpdate();
       }
     }
@@ -227,6 +229,7 @@ public class DynamoNetworkUdr {
 
   /**
    * Determines status of some jar file.
+   * @return Returns one of DOWNLOADED, INSTALLED, or AVAILABLE.
    */
   private static String getStatus(String jarFile) throws SQLException {
     String fn = "${FARRAGO_HOME}/plugin/" + jarFile;

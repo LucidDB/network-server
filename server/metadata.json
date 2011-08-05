@@ -12,7 +12,7 @@ from the composition of 'publisher-package-version.jar' and downloaded via
 the same directory and server hosting this metadata.
 ",
 
-    "md5sum": "f9f74e4f853f3888e4e21d17afb4a0b8",
+    "md5sum": "cf1de7335434685582f1d9380279d73b",
     "type": "connector", "publisher": "Dynamo", "package": "CouchDB",
     "version": "1.1", "depend": [],
     "rdepend": ["Jython-Jython-2.5.1"] }

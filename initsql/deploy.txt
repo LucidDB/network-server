@@ -29,7 +29,9 @@ SQLActions[ ] = {
     package varchar(255),
     version varchar(128),
     jar varchar(255),
-    status varchar(128))
+    status varchar(128),
+    dependencies varchar(65535),
+    reverse_dependencies varchar(65535))
   language java
   parameter style system defined java
   reads sql data
